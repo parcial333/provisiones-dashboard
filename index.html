@@ -161,7 +161,23 @@ const CURRENCIES = {
 };
 
 const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-let rows = [{ f: '', p: '' }, { f: '', p: '' }, { f: '', p: '' }];
+function loadRows() {
+  try {
+    const saved = localStorage.getItem('provisiones_rows');
+    return saved ? JSON.parse(saved) : [{ f: '', p: '' }, { f: '', p: '' }, { f: '', p: '' }];
+  } catch(e) { return [{ f: '', p: '' }, { f: '', p: '' }, { f: '', p: '' }]; }
+}
+function saveRows() {
+  try { localStorage.setItem('provisiones_rows', JSON.stringify(rows)); } catch(e) {}
+}
+function loadPais() {
+  try { return localStorage.getItem('provisiones_pais') || ''; } catch(e) { return ''; }
+}
+function savePais(p) {
+  try { localStorage.setItem('provisiones_pais', p); } catch(e) {}
+}
+
+let rows = loadRows();
 let currentCurrency = null;
 
 const svgCheck = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
@@ -206,9 +222,17 @@ function alertText(pct, f1, f2) {
 
 function onPaisChange() {
   const pais = document.getElementById('pais').value;
+  savePais(pais);
   currentCurrency = CURRENCIES[pais] || null;
   const badge = document.getElementById('fx-badge');
-  if (!pais || !currentCurrency) { badge.style.display = 'none'; render(); return; }
+  if (!pais || !currentCurrency) { badge.style.display = 'none'; // Restaurar país guardado
+const savedPais = loadPais();
+if (savedPais) {
+  document.getElementById('pais').value = savedPais;
+  onPaisChange();
+} else {
+  render();
+} return; }
   const cur = currentCurrency;
   badge.style.display = 'flex';
   if (cur.code === 'USD') {
@@ -232,12 +256,16 @@ function renderRows() {
   }).join('');
 }
 
-function updateRow(i, k, v) { rows[i][k] = v; render(); }
-function addRow() { rows.push({ f: '', p: '' }); renderRows(); render(); }
-function deleteRow(i) { if (rows.length <= 1) return; rows.splice(i, 1); renderRows(); render(); }
+function updateRow(i, k, v) { rows[i][k] = v; saveRows(); renderResults(); }
+function addRow() { rows.push({ f: '', p: '' }); saveRows(); renderRows(); renderResults(); }
+function deleteRow(i) { if (rows.length <= 1) return; rows.splice(i, 1); saveRows(); renderRows(); renderResults(); }
 
 function render() {
   renderRows();
+  renderResults();
+}
+
+function renderResults() {
   const pais = document.getElementById('pais').value.trim();
   const el = document.getElementById('results');
   const valid = rows.filter(function(r) { return r.p !== '' && !isNaN(parseFloat(r.p)); });
